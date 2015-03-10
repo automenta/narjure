@@ -33,30 +33,47 @@
    [s start end] (into (empty s) (drop-last (- (count s) end) (drop start s))))
  
  
+(defn textOutput  [ nar onOutput ]
+  (let [t (proxy [ TextOutput ] [nar]
+      (process [channel args]         
+        (let [ textRepresentation (proxy-super process channel args ) ]
+          (if (not= textRepresentation nil) (onOutput channel textRepresentation) )
+        )        
+      )
+  )] (do 
+    (.setShowInput t false)
+    (.setShowErrors t true)
+    (.setPriorityMin t (float 0.95) )
+    (.setShowStamp t false)
+    t)
+  )
+)
+
+
 ;; map with essential self
 (def self 
-  (let [n (new NAR (new Default) ) ]
+  (let [n (new NAR (new Default 4000) ) ]
   {
             :network "irc.freenode.net" 
             :port 6667 
             :name "narjure" 
             :chan "#nars"
             :nar n
-            :narTextOut ( new TextOutput n System/out )
+            :logicFrameMS 50
+            :logicCyclesPerFrame 1
             })
   )
 
-(defn echo
-  [irc s chan]
+(defn echo  [irc s chan]
   (let [st (clean s ".echo")]
     (message irc chan s)
   )
 )
+
+
 (defn username [u] (nth (clojure.string/split u #"[:|!]") 1 nil)  )
 
-(defn tokenterm 
-  [token]
-  
+(defn tokenterm [token]  
     (if (or (= (.pattern token) "word")  (= (.pattern token) "wordApos"))
       (clojure.string/join "" [ "\"" (.content token) "\"" ])
       (clojure.string/join "" [
@@ -66,16 +83,20 @@
     ; (Texts/escape "something")
 )
 
-(defn narsify
-  [text user] 
+(defn narsify [text user] 
   (let [tokens (map tokenterm (Twokenize/twokenize text)) ]
     (clojure.string/join "" [ 
         "<(*," user ",(*," (clojure.string/join "," tokens) ")) --> say>. :|:" ])
   )
 )
 
-(defn other
-  [irc s chan]
+(defn nal  [irc s chan]
+  (let [st (clean s "nal ")]
+    (.input (:nar self) st )
+  )
+)
+
+(defn other [irc s chan]
   (let [st (narsify (clean s " :") (username s)) ]
      ;(message irc chan st)
     (.input (:nar self) st )
@@ -93,10 +114,12 @@
           (cond                 ; check & handle known commands
             ;(.contains s ".minify")
             ;  (shorten irc s chan)
-            (.contains s ".echo")
-              (echo irc s chan)
             ;(.contains s ".syn")
             ;  (thesaurus irc s chan)))
+            (.contains s ":.echo ")
+              (echo irc s chan)
+            (.contains s ":nal ")
+              (nal irc s chan)
             :else
               (other irc s chan)
             ))
@@ -108,15 +131,34 @@
 
  
  (defn -main [& args]   
-   
-         (let [irc (connect 
+   (let [irc (connect 
                (:network self) (:port self) (:name self) 
                :real-name (:name self) 
                :callbacks {:raw-log cmd-callback})]
-           (do            
-             (.start (:nar self) 250 1)             
-             (join irc (:chan self))             
-           )
-         )
-   
+     (do            
+       
+       ;create NAR output -> IRC output handler
+       (textOutput (:nar self) 
+              (fn [ signalChannel textRepresentation ]
+                 
+                   (do                      
+                     (println textRepresentation)
+                     (message irc (:chan self) textRepresentation)                       
+                    )
+               )
+               
+       )
+       
+       (.input (:nar self) (new java.io.File "bot1.nal" ) )
+       
+       ;create local output display
+       ;(new TextOutput (:nar self) System/out (float 0.25) )
+       
+       ;start NAR reasoner
+       (.start (:nar self) (:logicFrameMS self) (:logicCyclesPerFrame self) )
+       
+       ;join channel
+       (join irc (:chan self))             
+       )
+   )
 )

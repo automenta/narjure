@@ -1,2 +1,20 @@
-<wtf <=> ^wonder>.
-<wtf <=> WTF>.
+'http://www.thezfiles.co.za/ROMULUS/browseOntologies.html
+'http://www.onto-med.de/ontologies/gfo/
+
+'<wtf <=> ^wonder>.
+'<wtf <=> WTF>.
+
+'SetVolume(0)!
+*volume=0
+
+
+schizo(narjure)!
+
+<<{#a} --> $b> ==> <(*,#a, $b) --> isInstance>>.
+<<$a --> [#b]> ==> <(*,$a, #b) --> isProperty>>.
+<<(*,$someone,#x) --> say> ==> <$someone --> someone>>.
+
+;<{a} --> b>.
+;<b --> c>.
+;<c --> [a]>.
+
