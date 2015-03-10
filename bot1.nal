@@ -4,17 +4,15 @@
 '<wtf <=> ^wonder>.
 '<wtf <=> WTF>.
 
-'SetVolume(0)!
-*volume=0
 
-
-schizo(narjure)!
+'s.nar.input("<(&&,<$1 --> sentence>,(^say,$1)) =/> <I --> chatty>>.");
+'s.nar.input("<I --> chatty>!");
 
 <<{#a} --> $b> ==> <(*,#a, $b) --> isInstance>>.
 <<$a --> [#b]> ==> <(*,$a, #b) --> isProperty>>.
-<<(*,$someone,#x) --> say> ==> <$someone --> someone>>.
+'<<(*,$someone,#x) --> say> ==> <$someone --> someone>>.
 
-;<{a} --> b>.
-;<b --> c>.
-;<c --> [a]>.
+'<{a} --> b>.
+'<b --> c>.
+'<c --> [a]>.
 

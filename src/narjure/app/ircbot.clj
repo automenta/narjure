@@ -1,57 +1,23 @@
-;(ns narsirc.core
-;  (:gen-class)
-;  (:import [java.io DataInputStream File FileInputStream BufferedInputStream])
-  ;(:import [nars.core NAR ])
-  ;(:import [my.package MyClassOne MyClassTwo]) 
-;)
-
-  
-;https://github.com/naduse/goofy/blob/master/src/goofy/core.clj
-;https://github.com/zakwilson/minibot/blob/master/src/minibot/core.clj
-  
-(ns narsirc.core
+(ns narjure.app.ircbot
   (:import [nars.core NAR ])
   (:import [nars.build Default ])
   (:import [nars.io TextOutput ])
+  (:import [nars.io BufferedOutput ])
   (:import [nars.io Texts ])
   (:import [nars.io.nlp Twokenize ])
   (:use [irclj.core]
   	    [irclj.parser]
   	    [irclj.events]
        ;[clojure.string]
-  	   ;[goofy.minify]
-  	   ;[goofy.calc]
-  	   ;[goofy.syn]
       )
 )
 
-(defn clean [s t]
-  (.trim (.substring s (+ (.length t) (.indexOf s t)))))
-
- (defn subseqx
-   "subsequence"
-   [s start end] (into (empty s) (drop-last (- (count s) end) (drop start s))))
- 
- 
-(defn textOutput  [ nar onOutput ]
-  (let [t (proxy [ TextOutput ] [nar]
-      (process [channel args]         
-        (let [ textRepresentation (proxy-super process channel args ) ]
-          (if (not= textRepresentation nil) (onOutput channel textRepresentation) )
-        )        
-      )
-  )] (do 
-    (.setShowInput t false)
-    (.setShowErrors t true)
-    (.setPriorityMin t (float 0.95) )
-    (.setShowStamp t false)
-    t)
-  )
-)
+;REFERENCE:
+;  https://github.com/naduse/goofy/blob/master/src/goofy/core.clj
+;  https://github.com/zakwilson/minibot/blob/master/src/minibot/core.clj
 
 
-;; map with essential self
-(def self 
+(def self ;; map with essential self
   (let [n (new NAR (new Default 4000) ) ]
   {
             :network "irc.freenode.net" 
@@ -63,6 +29,26 @@
             :logicCyclesPerFrame 1
             })
   )
+
+
+(defn clean [s t]
+  (.trim (.substring s (+ (.length t) (.indexOf s t)))))
+
+ (defn subseqx
+   "subsequence"
+   [s start end] (into (empty s) (drop-last (- (count s) end) (drop start s))))
+ 
+ 
+(defn textOutput  [ nar onOutput ]
+    (proxy [ BufferedOutput ] [nar 1 500 16 ]
+      (output [ items ]         
+        (onOutput ( .toString this items 505 ) ) ;irc line length limit
+    )
+  )
+)
+
+
+
 
 (defn echo  [irc s chan]
   (let [st (clean s ".echo")]
@@ -84,9 +70,11 @@
 )
 
 (defn narsify [text user] 
-  (let [tokens (map tokenterm (Twokenize/twokenize text)) ]
+  (let [tokens (map tokenterm (Twokenize/twokenize (.toLowerCase text) )) ]
     (clojure.string/join "" [ 
-        "<(*," user ",(*," (clojure.string/join "," tokens) ")) --> say>. :|:" ])
+        ;"$0.3$ <(*," user ",(*," (clojure.string/join "," tokens) ")) --> say>. :|:" 
+        "$0.3$ <(&/," (clojure.string/join "," tokens) ") =\\> <" user " --> say>>. :|:" 
+    ])
   )
 )
 
@@ -120,6 +108,8 @@
               (echo irc s chan)
             (.contains s ":nal ")
               (nal irc s chan)
+            (.contains s "CHARSET=ascii") ;server login message, TODO find a better way to detect this
+              (do true)
             :else
               (other irc s chan)
             ))
@@ -139,7 +129,7 @@
        
        ;create NAR output -> IRC output handler
        (textOutput (:nar self) 
-              (fn [ signalChannel textRepresentation ]
+              (fn [ textRepresentation ]
                  
                    (do                      
                      (println textRepresentation)
@@ -149,10 +139,11 @@
                
        )
        
+       (.input (:nar self) (clojure.string/join "" [ "schizo(" (:name self) ")!"]  ))
        (.input (:nar self) (new java.io.File "bot1.nal" ) )
        
        ;create local output display
-       ;(new TextOutput (:nar self) System/out (float 0.25) )
+       (new TextOutput (:nar self) System/out (float 0.5) )
        
        ;start NAR reasoner
        (.start (:nar self) (:logicFrameMS self) (:logicCyclesPerFrame self) )

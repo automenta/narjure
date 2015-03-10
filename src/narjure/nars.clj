@@ -1,4 +1,5 @@
 ;temporary code, not used yet
+;this will contain the main part of narjure
 
  
 (ns narsirc.core
