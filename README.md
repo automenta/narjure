@@ -1,7 +1,3 @@
-# narsirc
+# NARjure - OpenNARS for Clojure
 
-A Clojure app to ... well, that part is up to you.
-
-## Usage
-
-FIXME
+Clojure interface for OpenNARS, with example apps.
